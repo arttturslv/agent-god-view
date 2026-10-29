@@ -1,0 +1,3 @@
+[submodule ".ai-crew"]
+	path = .ai-crew
+	url = https://github.com/arttturslv/.ai-crew

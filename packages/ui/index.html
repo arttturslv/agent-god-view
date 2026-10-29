@@ -1,0 +1,520 @@
+<!-- @format -->
+
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Agent God View - Pixel Office</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      canvas {
+        display: block;
+        max-width: 100%;
+        max-height: 100%;
+        image-rendering: -moz-crisp-edges;
+        image-rendering: -webkit-crisp-edges;
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
+      }
+      html,
+      body {
+        width: 100%;
+        min-height: 100%;
+        height: 100dvh;
+        background-color: #0b0f15;
+        color: #e2e8f0;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+      header {
+        min-height: 48px;
+        height: auto;
+        background: #141a23;
+        border-bottom: 1px solid #232c39;
+        padding: 6px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-shrink: 0;
+        z-index: 10;
+      }
+      .brand {
+        color: #82b965;
+        font-weight: 700;
+        font-family: monospace;
+        font-size: 13px;
+        letter-spacing: 1.5px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .top-controls {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      button {
+        background: #202836;
+        color: #cbd5e1;
+        border: 1px solid #334054;
+        padding: 5px 11px;
+        border-radius: 5px;
+        font-size: 11px;
+        cursor: pointer;
+        font-family: monospace;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+      }
+      button:hover {
+        background: #2d384b;
+        color: #fff;
+        border-color: #82b965;
+      }
+      button.btn-primary {
+        background: #1e3a24;
+        border-color: #82b965;
+        color: #82b965;
+        font-weight: bold;
+      }
+      #viewport-wrapper {
+        flex: 1;
+        position: relative;
+        display: flex;
+        overflow: hidden;
+        min-width: 0;
+        min-height: 0;
+      }
+      #canvas-container {
+        flex: 1;
+        height: 100%;
+        min-width: 0;
+        background: #080b0f;
+        cursor: grab;
+        position: relative;
+        overflow: auto;
+        touch-action: none;
+      }
+      #canvas-container:active {
+        cursor: grabbing;
+      }
+      #map-stage {
+        position: relative;
+        flex: none;
+      }
+      #viewport,
+      #overlay {
+        position: absolute;
+        display: block;
+        max-width: none;
+        max-height: none;
+        image-rendering: pixelated;
+      }
+      #overlay {
+        pointer-events: none;
+        z-index: 1;
+      }
+      #permission-banner {
+        position: absolute;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 12;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+        max-width: min(560px, calc(100% - 24px));
+        padding: 7px 12px;
+        border: 1px solid #f59e0b;
+        border-radius: 6px;
+        background: rgba(41, 28, 8, 0.96);
+        box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
+        color: #fde68a;
+        font-family: monospace;
+        font-size: 11px;
+        line-height: 1.4;
+        text-align: center;
+        pointer-events: none;
+      }
+      #permission-banner[hidden] {
+        display: none;
+      }
+      #permission-banner-text {
+        overflow-wrap: anywhere;
+      }
+      #permission-banner-impact {
+        color: #fbbf24;
+        overflow-wrap: anywhere;
+        pointer-events: auto;
+      }
+      #permission-banner-impact[hidden] {
+        display: none;
+      }
+      .map-label,
+      .map-bubble,
+      .map-tooltip {
+        position: absolute;
+        box-sizing: border-box;
+        font-family: "Press Start 2P", monospace;
+        line-height: 1.5;
+        white-space: normal;
+        text-align: center;
+        text-shadow: 1px 1px #05070a;
+      }
+      .map-label {
+        transform: translate(-50%, -50%);
+        padding: 5px 7px;
+        border: 1px solid #05070a;
+        border-radius: 3px;
+        background: rgba(5, 9, 15, 0.92);
+        color: #e2e8f0;
+        font-size: 11px;
+      }
+      .map-label.agent-label {
+        padding: 2px 4px;
+        font-size: 10px;
+      }
+      .map-bubble {
+        z-index: 2;
+        max-width: 320px;
+        max-height: 110px;
+        padding: 7px 9px;
+        border: 1px solid #05070a;
+        border-radius: 4px;
+        color: #fff;
+        font-size: 11px;
+        text-align: left;
+        overflow-wrap: anywhere;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        pointer-events: auto;
+        scrollbar-color: #82b965 #141a23;
+        touch-action: none;
+      }
+      .map-tooltip {
+        z-index: 3;
+        max-width: 360px;
+        padding: 8px 10px;
+        border: 1px solid #82b965;
+        background: rgba(10, 14, 20, 0.96);
+        color: #cbd5e1;
+        font-size: 10px;
+        text-align: left;
+        overflow-wrap: anywhere;
+      }
+      .map-tooltip strong {
+        display: block;
+        margin-bottom: 4px;
+        color: #82b965;
+      }
+      /* Gaveta do Simulador */
+      #sim-drawer {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: min(320px, 92vw);
+        height: 100%;
+        background: #121720;
+        border-left: 1px solid #212936;
+        display: flex;
+        flex-direction: column;
+        transition: transform 0.25s ease;
+        transform: translateX(100%);
+        z-index: 20;
+        box-shadow: -12px 0 28px rgba(0, 0, 0, 0.28);
+      }
+      #sim-drawer.open {
+        transform: translateX(0);
+      }
+      .drawer-header {
+        padding: 12px 16px;
+        border-bottom: 1px solid #212936;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 12px;
+        font-weight: bold;
+        color: #cbd5e1;
+        font-family: monospace;
+      }
+      .tabs-bar {
+        display: flex;
+        background: #0d1219;
+        border-bottom: 1px solid #212936;
+      }
+      .tab-btn {
+        flex: 1;
+        padding: 8px 4px;
+        text-align: center;
+        background: transparent;
+        border: none;
+        border-bottom: 2px solid transparent;
+        border-radius: 0;
+        color: #8292a4;
+        font-size: 11px;
+        cursor: pointer;
+      }
+      .tab-btn.active {
+        color: #82b965;
+        border-bottom-color: #82b965;
+        background: #141a23;
+      }
+      .tab-pane {
+        display: none;
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        padding: 14px;
+      }
+      .tab-pane.active {
+        display: block;
+        flex: 1;
+      }
+      .sim-section-title {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #64748b;
+        margin-bottom: 8px;
+        font-family: monospace;
+      }
+      .actions-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 7px;
+        margin-bottom: 16px;
+      }
+      .actions-grid button {
+        justify-content: flex-start;
+        padding: 8px 10px;
+      }
+      .team-card {
+        background: #171e2a;
+        border: 1px solid #242e3f;
+        border-radius: 6px;
+        padding: 8px 10px;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .team-card.active {
+        border-color: #82b965;
+        background: #15241b;
+      }
+      .team-card.needs-permission {
+        border-color: #f59e0b;
+        background: #2a1f0a;
+        animation: permission-pulse 1.4s ease-in-out infinite;
+      }
+      @keyframes permission-pulse {
+        0%,
+        100% {
+          box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.45);
+        }
+        50% {
+          box-shadow: 0 0 0 3px rgba(245, 158, 11, 0);
+        }
+      }
+      .team-card-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .avatar-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+      }
+      .team-name {
+        font-size: 11px;
+        font-weight: bold;
+      }
+      .team-tag {
+        font-size: 9px;
+        color: #8292a4;
+        font-family: monospace;
+      }
+      .team-model {
+        font-size: 9px;
+        color: #64748b;
+        font-family: monospace;
+      }
+      .team-status-badge {
+        font-size: 9px;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-family: monospace;
+        text-transform: uppercase;
+        background: #232c3a;
+        color: #94a3b8;
+      }
+      .team-status-badge.status-working {
+        background: #19381e;
+        color: #82b965;
+      }
+      .team-status-badge.status-reading {
+        background: #132f4c;
+        color: #38bdf8;
+      }
+      .team-status-badge.status-waiting {
+        background: #3b2f0b;
+        color: #fbbf24;
+      }
+      .team-status-badge.status-requesting_permission {
+        background: #4a1d1d;
+        color: #f87171;
+      }
+      pre#json-content {
+        background: #090c10;
+        border: 1px solid #1c2430;
+        border-radius: 4px;
+        padding: 10px;
+        font-size: 10px;
+        font-family: monospace;
+        color: #82b965;
+        overflow-x: auto;
+        max-height: 400px;
+      }
+      footer {
+        min-height: 36px;
+        height: auto;
+        background: #141a23;
+        border-top: 1px solid #232c39;
+        padding: 6px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px 16px;
+        flex-wrap: wrap;
+        font-size: 11px;
+        font-family: monospace;
+        color: #8292a4;
+        flex-shrink: 0;
+      }
+      .status-indicator {
+        display: inline-block;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #82b965;
+        margin-right: 6px;
+      }
+      .zoom-controls {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-left: auto;
+      }
+      .zoom-controls button {
+        min-width: 28px;
+        justify-content: center;
+        padding: 4px 7px;
+      }
+      #zoom-level {
+        min-width: 42px;
+        text-align: center;
+        color: #cbd5e1;
+      }
+
+      /* Compact Mode for PiP */
+      body.compact header,
+      body.compact footer,
+      body.compact #sim-drawer {
+        display: none !important;
+      }
+      body.compact #canvas-container {
+        cursor: default !important;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="brand">
+        <span>●</span>
+        <span id="brand-title">AGENT GOD VIEW // VIRTUAL OFFICE</span>
+      </div>
+      <div class="top-controls">
+        <button id="btn-sound">🔊 Som Ativo</button>
+        <button id="btn-reset-cam">🎯 Reset Câmera</button>
+        <button id="btn-toggle-sim" class="btn-primary">
+          ⚡ Painel
+        </button>
+      </div>
+    </header>
+
+    <div id="viewport-wrapper">
+      <div id="permission-banner" hidden role="status" aria-live="polite">
+        <span id="permission-banner-text"></span>
+        <span id="permission-banner-impact" hidden></span>
+      </div>
+      <div id="canvas-container">
+        <div id="map-stage">
+          <canvas id="viewport"></canvas>
+          <div id="overlay" aria-hidden="true"></div>
+        </div>
+      </div>
+
+      <!-- Drawer -->
+      <div id="sim-drawer">
+        <div class="drawer-header">
+          <span>PAINEL DE CONTROLE</span>
+          <button id="btn-close-drawer">✕</button>
+        </div>
+        <div class="tabs-bar">
+          <button class="tab-btn active" data-target="tab-team">Equipe</button>
+          <button class="tab-btn" data-target="tab-json">JSON</button>
+        </div>
+
+        <!-- Aba 1: Equipe -->
+        <div id="tab-team" class="tab-pane active">
+          <div class="sim-section-title">Agentes Ativos</div>
+          <div id="team-list"></div>
+        </div>
+
+        <!-- Aba 2: JSON -->
+        <div id="tab-json" class="tab-pane">
+          <div class="sim-section-title">CrewState em Tempo Real</div>
+          <pre id="json-content">Aguardando dados...</pre>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <div>
+        <span class="status-indicator"></span>
+        <span>Projeto: <b id="hud-project" style="color: #fff">Carregando...</b></span>
+      </div>
+      <div class="footer-hint" style="color: #556577">
+        Arraste o mapa • Scroll para zoom
+      </div>
+      <div class="zoom-controls" aria-label="Controles de zoom">
+        <button id="btn-zoom-out" aria-label="Diminuir zoom" title="Diminuir zoom">−</button>
+        <span id="zoom-level" aria-live="polite">100%</span>
+        <button id="btn-zoom-in" aria-label="Aumentar zoom" title="Aumentar zoom">+</button>
+      </div>
+    </footer>
+
+    <script type="module" src="./src/app.ts"></script>
+  </body>
+</html>

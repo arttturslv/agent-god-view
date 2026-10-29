@@ -1,0 +1,16 @@
+{
+  "name": "agent-god-view",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "description": "Visualizer for AI agents in an animated office",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "packageManager": "pnpm@9.0.0",
+  "scripts": {
+    "build": "pnpm --recursive build",
+    "test": "pnpm --recursive test",
+    "print-agents": "node scripts/print-agents.js"
+  }
+}

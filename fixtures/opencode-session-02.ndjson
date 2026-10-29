@@ -1,0 +1,5 @@
+{"ts":1793233000000,"type":"agents_defined","data":{"sessionID":"ses_01HTEST0002","agents":[{"id":"architect","name":"Architect","description":"System architect designing structure.","model":"claude-3-5-sonnet"},{"id":"coder","name":"Coder","description":"Implementation specialist writing code.","model":"claude-3-5-sonnet"},{"id":"tester","name":"Tester","description":"QA engineer executing tests.","model":"gpt-4o"}]}}
+{"ts":1793233001200,"type":"message.updated","data":{"sessionID":"ses_01HTEST0002","messageID":"msg_01HTEST0004","agentId":"coder","agentName":"Coder","role":"assistant","task":"Applying the database migration"}}
+{"ts":1793233002300,"type":"permission.asked","data":{"id":"per_01HTEST0002","sessionID":"ses_01HTEST0002","agentId":"coder","agentName":"Coder","what":"Run command: pnpm test","tool":"bash"}}
+{"ts":1793233003900,"type":"permission.replied","data":{"id":"per_01HTEST0002","sessionID":"ses_01HTEST0002","granted":false}}
+{"ts":1793233004200,"type":"session.error","data":{"sessionID":"ses_01HTEST0002","agentId":"coder","agentName":"Coder","message":"Permission denied: bash command was not executed."}}
