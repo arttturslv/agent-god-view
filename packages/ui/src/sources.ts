@@ -1,5 +1,18 @@
 /** @format */
 
+import { listen } from "@tauri-apps/api/event";
+import { createMapper } from "@agent-god-view/adapter-opencode/mapper";
+import {
+  emptyState,
+  reduce,
+  type CrewState as CoreCrewState,
+} from "@agent-god-view/core";
+import {
+  getTauriProjectInfo,
+  getTauriSnapshot,
+  isTauriRuntime,
+} from "./tauri.js";
+
 export interface CrewState {
   agents: Record<string, any>;
   pendingPermissions?: any[];
@@ -110,6 +123,127 @@ export class ReplaySource implements StateSource {
         clearTimeout(this.timer);
         this.timer = null;
       }
+    };
+  }
+}
+
+interface SpoolLinePayload {
+  projectId: string;
+  line: string;
+  offset: number;
+}
+
+const textEncoder = new TextEncoder();
+
+function byteLength(value: string): number {
+  return textEncoder.encode(value).length;
+}
+
+function snapshotByteOffset(content: string): number {
+  const lastNewline = content.lastIndexOf("\n");
+  return lastNewline < 0 ? 0 : byteLength(content.slice(0, lastNewline + 1));
+}
+
+function applyLine(
+  state: CoreCrewState,
+  line: string,
+  mapper: ReturnType<typeof createMapper>,
+): CoreCrewState {
+  const clean = line.endsWith("\r") ? line.slice(0, -1) : line;
+  if (!clean) return state;
+
+  let next = state;
+  for (const event of mapper.mapEvent(clean)) {
+    next = reduce(next, event);
+  }
+  return next;
+}
+
+export class TauriEventSource implements StateSource {
+  subscribe(cb: (s: CrewState) => void): () => void {
+    if (!isTauriRuntime()) return () => {};
+
+    let cancelled = false;
+    let unlisten: (() => void) | null = null;
+    let snapshotReady = false;
+    let buffered: SpoolLinePayload[] = [];
+    let snapshotOffset = 0;
+    let projectId = "";
+
+    const mapper = createMapper();
+    let state = emptyState();
+
+    const publish = () => {
+      cb({ ...state, projectId });
+    };
+
+    const apply = (payload: SpoolLinePayload) => {
+      if (!payload || payload.projectId !== projectId) return;
+      if (payload.offset < snapshotOffset) return;
+      state = applyLine(state, payload.line, mapper);
+      state.projectId = projectId;
+      publish();
+    };
+
+    void (async () => {
+      const project = await getTauriProjectInfo();
+      if (!project || cancelled) return;
+
+      projectId = project.projectId;
+      state = reduce(state, {
+        type: "agents_defined",
+        ts: Date.now(),
+        agents: project.agents,
+      });
+      state.projectId = projectId;
+
+      unlisten = await listen<SpoolLinePayload>("spool-line", (event) => {
+        if (cancelled) return;
+        const payload = event.payload;
+        if (!payload) return;
+        if (!snapshotReady) {
+          buffered.push(payload);
+          return;
+        }
+        apply(payload);
+      });
+
+      if (cancelled) {
+        unlisten?.();
+        return;
+      }
+
+      let snapshot = "";
+      try {
+        snapshot = await getTauriSnapshot(projectId);
+      } catch (error) {
+        console.error("[TauriEventSource] Failed to read snapshot:", error);
+      }
+      if (cancelled) return;
+
+      snapshotOffset = snapshotByteOffset(snapshot);
+
+      const lines = snapshot.split("\n");
+      lines.pop();
+      for (const line of lines) {
+        state = applyLine(state, line, mapper);
+      }
+      state.projectId = projectId;
+      publish();
+
+      snapshotReady = true;
+      const pending = buffered;
+      buffered = [];
+      for (const payload of pending) {
+        apply(payload);
+      }
+    })().catch((error) => {
+      console.error("[TauriEventSource] Failed to initialize:", error);
+    });
+
+    return () => {
+      cancelled = true;
+      unlisten?.();
     };
   }
 }

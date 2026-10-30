@@ -7,6 +7,11 @@
     "build": "vite build",
     "preview": "vite preview"
   },
+  "dependencies": {
+    "@agent-god-view/adapter-opencode": "workspace:*",
+    "@agent-god-view/core": "workspace:*",
+    "@tauri-apps/api": "^2.0.0"
+  },
   "devDependencies": {
     "@types/node": "^20.0.0",
     "typescript": "^5.0.0",

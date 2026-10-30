@@ -48,7 +48,7 @@ export function reduce(s, e) {
         }
         case "handoff":
             next.lastHandoff = { from: e.from, to: e.to, ts: e.ts };
-            touch(e.from, { status: "working", task: `delegou para ${e.to}` });
+            touch(e.from, { status: "idle", task: undefined });
             touch(e.to, { status: "working" });
             break;
         case "idle":

@@ -25,12 +25,39 @@ import {
   saveSnapshot,
   serializeSnapshot,
 } from "./persistence.js";
-import { SseSource, PollingSource, StateSource } from "./sources.js";
+import {
+  SseSource,
+  PollingSource,
+  StateSource,
+  TauriEventSource,
+} from "./sources.js";
+import {
+  clearPermissionAttention,
+  closeCurrentWindow,
+  getCurrentWindowLabel,
+  getTauriProjectInfo,
+  isTauriRuntime,
+  notifyPermission,
+  openPip,
+} from "./tauri.js";
 
-// Check compact mode for PiP
-const isCompact = window.location.search.includes("compact") || window.location.search.includes("mode=compact");
+// Check compact mode for PiP. The Tauri label check below also covers the
+// native PiP window created by Rust.
+let isCompact =
+  window.location.search.includes("compact") ||
+  window.location.search.includes("mode=compact");
 if (isCompact) {
   document.body.classList.add("compact");
+}
+if (isTauriRuntime()) {
+  getCurrentWindowLabel()
+    .then((label) => {
+      if (label === "pip") {
+        isCompact = true;
+        document.body.classList.add("compact");
+      }
+    })
+    .catch(() => {});
 }
 
 const canvas = document.getElementById("viewport") as HTMLCanvasElement;
@@ -45,6 +72,18 @@ const teamList = document.getElementById("team-list");
 const permissionBanner = document.getElementById("permission-banner");
 const permissionBannerText = document.getElementById("permission-banner-text");
 const permissionBannerImpact = document.getElementById("permission-banner-impact");
+
+document.getElementById("btn-pip")?.addEventListener("click", () => {
+  void openPip().catch((error) => {
+    console.error("[pip] Failed to open floating window:", error);
+  });
+});
+
+document.getElementById("btn-pip-close")?.addEventListener("click", () => {
+  void closeCurrentWindow().catch((error) => {
+    console.error("[pip] Failed to close floating window:", error);
+  });
+});
 
 const ORIGINAL_TITLE = document.title;
 const PREFIXED_TITLE = `(1) ${ORIGINAL_TITLE}`;
@@ -131,6 +170,7 @@ let isDragging = false;
 let dragDist = 0;
 let lastMouse = { x: 0, y: 0 };
 let lastHandoffSignature: string | null = null;
+let lastPermissionSignature: string | null = null;
 let isConversationActive = false;
 
 export const stateStore = {
@@ -274,6 +314,7 @@ export function applyState(state: any) {
   const firstPerm = hasPending ? pendingPerms[0] : null;
 
   updatePermissionState(firstPerm, hasPending);
+  syncPermissionAlert(pendingPerms, hasPending);
   reconcileStatusBubbles();
   applyHandoffEvent(state);
 
@@ -285,10 +326,6 @@ export function applyState(state: any) {
 function updatePermissionState(permission: any, pending: boolean) {
   const what = permission && typeof permission.what === "string" ? permission.what.trim() : "";
   const pendingAgentId = permission ? matchId(permission.agentId) : null;
-
-  if (pending) {
-    audio.playAlert();
-  }
 
   const bubbleText = `⚠️ Aprovar: ${truncateText(what || "ação pendente", 44)}`;
   for (const [id, agent] of Object.entries(agents)) {
@@ -307,6 +344,39 @@ function updatePermissionState(permission: any, pending: boolean) {
       agent.bubble = null;
     }
   }
+}
+
+function syncPermissionAlert(pendingPerms: any[], hasPending: boolean) {
+  const signature = hasPending
+    ? pendingPerms
+        .map((permission) => permission?.id)
+        .filter((id) => typeof id === "string" && id.length > 0)
+        .sort()
+        .join("|")
+    : "";
+  const active = signature.length > 0;
+
+  if (active && signature !== lastPermissionSignature) {
+    const permission = pendingPerms[0];
+    const agent = permission ? agents[matchId(permission.agentId) || ""] : null;
+    const agentName = agent
+      ? `${agent.full} (${agent.name})`
+      : permission?.agentId || "Persona";
+    const what = permission?.what || "ação pendente";
+
+    audio.playAlert();
+    void notifyPermission(agentName, what).catch((error) => {
+      console.error("[permission] Failed to trigger native alert:", error);
+    });
+  }
+
+  if (!active && lastPermissionSignature) {
+    void clearPermissionAttention().catch((error) => {
+      console.error("[permission] Failed to clear native alert:", error);
+    });
+  }
+
+  lastPermissionSignature = active ? signature : null;
 }
 
 function reconcileStatusBubbles() {
@@ -657,6 +727,24 @@ function renderTeamCards() {
 
 // Fetch project info to set projectId for persistence
 async function initProject() {
+  if (isTauriRuntime()) {
+    try {
+      const proj = await getTauriProjectInfo();
+      if (proj?.projectId) {
+        currentProjectId = proj.projectId;
+        if (hudProject) hudProject.textContent = proj.name || currentProjectId;
+        savedSnapshot = loadSnapshot(currentProjectId);
+        if (savedSnapshot?.camera?.zoom) {
+          camera.zoom = savedSnapshot.camera.zoom;
+          fitCanvasToContainer();
+        }
+      }
+    } catch {
+      if (hudProject) hudProject.textContent = "Local";
+    }
+    return;
+  }
+
   try {
     const res = await fetch("/project");
     if (res.ok) {
@@ -673,8 +761,10 @@ async function initProject() {
 }
 
 initProject().then(() => {
-  // Initialize state source: SseSource with PollingSource fallback
-  const source: StateSource = new SseSource("/events");
+  // Initialize the state source: native Tauri events or SSE in browser mode.
+  const source: StateSource = isTauriRuntime()
+    ? new TauriEventSource()
+    : new SseSource("/events");
   source.subscribe((state) => {
     applyState(state);
   });
@@ -682,6 +772,7 @@ initProject().then(() => {
 
 // Persistence
 function persistSnapshot() {
+  if (isCompact) return;
   try {
     saveSnapshot(serializeSnapshot({ agents, camera, container }), currentProjectId);
   } catch {}
@@ -693,8 +784,22 @@ document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden") persistSnapshot();
 });
 
-// Animation loop
-function loop() {
+// Animation loop. The PiP window is capped at 15 fps and stops drawing while
+// the document is hidden/minimized.
+const COMPACT_FRAME_MS = 1000 / 15;
+let lastCompactFrame = 0;
+
+function loop(timestamp = 0) {
+  if (document.visibilityState === "hidden") {
+    requestAnimationFrame(loop);
+    return;
+  }
+  if (isCompact && timestamp - lastCompactFrame < COMPACT_FRAME_MS) {
+    requestAnimationFrame(loop);
+    return;
+  }
+  if (isCompact) lastCompactFrame = timestamp;
+
   drawOffice(ctx, canvas, agents, stateStore.hoveredAgent);
   drawOfficeOverlay(
     overlay,

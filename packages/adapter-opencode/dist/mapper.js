@@ -98,6 +98,8 @@ function mapRaw(raw, state) {
     const part = rec(data.part);
     const out = [];
     const agentOf = (sessionId) => sessionId ? state.sessions.get(sessionId)?.agentId : undefined;
+    // Resolution order: direct event agent first, then the session map.
+    const resolveAgent = (sessionId, ...direct) => firstString(...direct) ?? agentOf(sessionId);
     switch (type) {
         case "agents_defined": {
             // Não limpa o mapa de sessões: o leitor do .opencode reemite isso a cada edição de arquivo.
@@ -111,23 +113,25 @@ function mapRaw(raw, state) {
             // Reserva: o título do subagente tem o formato "... (@nome subagent)".
             const fromTitle = /@([\w-]+) subagent/.exec(asString(info.title) ?? "")?.[1];
             const known = agentOf(id);
+            const agentId = firstString(data.agentId, info.agentId, info.agent, fromTitle);
             recordSession(state, id, {
                 parentId,
-                agentId: known ? undefined : fromTitle,
+                agentId: known ? undefined : agentId,
             });
             flushHandoffs(state, ts, out);
             return out;
         }
         case "message.updated": {
-            const sid = firstString(info.sessionID, info.sessionId, data.sessionID);
-            const agent = firstString(info.agent, info.mode);
+            const sid = firstString(info.sessionID, info.sessionId, data.sessionID, data.sessionId);
+            const agent = firstString(info.agent, info.mode, info.agentId, data.agentId);
             if (sid && agent)
                 recordSession(state, sid, { agentId: agent });
             flushHandoffs(state, ts, out);
             return out; // só aprende quem é o agente; quem está ocupado vem de session.status
         }
         case "session.status": {
-            const agentId = agentOf(firstString(data.sessionID, data.sessionId));
+            const sessionId = firstString(data.sessionID, data.sessionId);
+            const agentId = resolveAgent(sessionId, data.agentId);
             const status = firstString(rec(data.status).type, data.status);
             if (!agentId)
                 return [];
@@ -142,13 +146,15 @@ function mapRaw(raw, state) {
             return [];
         }
         case "session.idle": {
-            const agentId = agentOf(firstString(data.sessionID, data.sessionId));
+            const sessionId = firstString(data.sessionID, data.sessionId);
+            const agentId = resolveAgent(sessionId, data.agentId);
             return agentId ? [{ type: "idle", ts, agentId }] : [];
         }
         case "message.part.updated": {
             if (part.type !== "tool")
                 return [];
-            const agentId = agentOf(firstString(part.sessionID, data.sessionID));
+            const sessionId = firstString(part.sessionID, data.sessionID);
+            const agentId = resolveAgent(sessionId, data.agentId);
             if (!agentId)
                 return [];
             const status = firstString(rec(part.state).status);
@@ -168,7 +174,8 @@ function mapRaw(raw, state) {
             return [];
         }
         case "tool.execute.before": {
-            const agentId = agentOf(firstString(data.sessionID, data.sessionId));
+            const sessionId = firstString(data.sessionID, data.sessionId);
+            const agentId = resolveAgent(sessionId, data.agentId);
             if (!agentId)
                 return [];
             const tool = asString(data.tool);
@@ -185,10 +192,11 @@ function mapRaw(raw, state) {
         case "permission.asked":
         case "permission.updated": {
             const id = firstString(data.id, data.requestID, data.permissionID, info.id);
-            const agentId = agentOf(firstString(data.sessionID, info.sessionID));
+            const sessionId = firstString(data.sessionID, info.sessionID);
+            const agentId = resolveAgent(sessionId, data.agentId, info.agentId);
             if (!id || !agentId)
                 return [];
-            const what = firstString(data.title, info.title, data.permission, data.type, info.type) ?? `permission:${id}`;
+            const what = firstString(data.what, data.description, data.title, info.title, data.permission, data.type, info.type) ?? `permission:${id}`;
             return [{ type: "permission_request", ts, agentId, id, what }];
         }
         case "permission.replied": {
@@ -205,7 +213,8 @@ function mapRaw(raw, state) {
             ];
         }
         case "session.error": {
-            const agentId = agentOf(firstString(data.sessionID, data.sessionId));
+            const sessionId = firstString(data.sessionID, data.sessionId);
+            const agentId = resolveAgent(sessionId, data.agentId);
             const err = rec(data.error);
             const message = firstString(err.message, rec(err.data).message, data.message) ??
                 "Erro desconhecido";

@@ -446,10 +446,51 @@
       body.compact #canvas-container {
         cursor: default !important;
       }
+      #pip-chrome {
+        display: none;
+      }
+      body.compact #pip-chrome {
+        display: flex;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 30;
+        align-items: center;
+        justify-content: space-between;
+        gap: 6px;
+        height: 22px;
+        padding: 0 4px 0 8px;
+        background: rgba(11, 15, 21, 0.82);
+        border-bottom: 1px solid #232c39;
+        color: #82b965;
+        font-family: monospace;
+        font-size: 9px;
+        letter-spacing: 1px;
+      }
+      #pip-chrome .pip-title {
+        flex: 1;
+        pointer-events: none;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      #pip-chrome button {
+        padding: 1px 5px;
+        min-width: 18px;
+        justify-content: center;
+        font-size: 12px;
+        line-height: 1;
+      }
     </style>
-    <script type="module" crossorigin src="/assets/index-DNWzZyhA.js"></script>
+    <script type="module" crossorigin src="/assets/index-pWPWEscu.js"></script>
   </head>
   <body>
+    <div id="pip-chrome" data-tauri-drag-region>
+      <span class="pip-title" data-tauri-drag-region>AGENT GOD VIEW</span>
+      <button id="btn-pip-close" title="Fechar PiP">&times;</button>
+    </div>
+
     <header>
       <div class="brand">
         <span>●</span>
@@ -458,6 +499,7 @@
       <div class="top-controls">
         <button id="btn-sound">🔊 Som Ativo</button>
         <button id="btn-reset-cam">🎯 Reset Câmera</button>
+        <button id="btn-pip" title="Abrir janela flutuante">PiP</button>
         <button id="btn-toggle-sim" class="btn-primary">
           ⚡ Painel
         </button>

@@ -1,3 +1,5 @@
 # AI Crew generated OpenCode agents
 .opencode/agents/ai-crew-*.md
 node_modules
+packages/shell/src-tauri/target
+packages/shell/src-tauri/gen
