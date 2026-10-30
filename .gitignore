@@ -3,4 +3,5 @@
 node_modules
 packages/shell/src-tauri/target
 packages/shell/src-tauri/gen
-.ai-crew
+.ai-crew/
+.opencode/
