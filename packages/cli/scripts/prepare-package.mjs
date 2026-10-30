@@ -13,9 +13,14 @@ const required = process.argv.includes('--required');
 const uiDist = resolve(repoRoot, 'packages', 'ui', 'dist');
 const uiTarget = resolve(packageDir, 'ui-dist');
 
+const rootPostinstall = resolve(repoRoot, 'scripts', 'postinstall.mjs');
+const pkgPostinstall = resolve(packageDir, 'scripts', 'postinstall.mjs');
+const postinstallSource = existsSync(rootPostinstall) ? rootPostinstall : pkgPostinstall;
+
 const assets = [
   { source: resolve(repoRoot, 'README.md'), target: resolve(packageDir, 'README.md') },
   { source: resolve(repoRoot, 'LICENSE'), target: resolve(packageDir, 'LICENSE') },
+  { source: postinstallSource, target: pkgPostinstall },
 ];
 
 let failed = false;
@@ -25,6 +30,10 @@ for (const asset of assets) {
     console.error(`[agent-god-view] Missing ${asset.source}`);
     failed = true;
     continue;
+  }
+  const targetDir = dirname(asset.target);
+  if (!existsSync(targetDir)) {
+    await mkdir(targetDir, { recursive: true });
   }
   await copyFile(asset.source, asset.target);
 }

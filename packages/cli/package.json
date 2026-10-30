@@ -18,6 +18,7 @@
     "dist",
     "ui-dist",
     "bin",
+    "scripts",
     "README.md",
     "LICENSE"
   ],
