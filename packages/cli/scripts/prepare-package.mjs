@@ -18,7 +18,7 @@ const pkgPostinstall = resolve(packageDir, 'scripts', 'postinstall.mjs');
 const postinstallSource = existsSync(rootPostinstall) ? rootPostinstall : pkgPostinstall;
 
 const assets = [
-  { source: resolve(repoRoot, 'README.md'), target: resolve(packageDir, 'README.md') },
+  { source: resolve(packageDir, 'README.md'), target: resolve(packageDir, 'README.md') },
   { source: resolve(repoRoot, 'LICENSE'), target: resolve(packageDir, 'LICENSE') },
   { source: postinstallSource, target: pkgPostinstall },
 ];
