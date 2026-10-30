@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /** @format */
 
-import { cp, copyFile, rm, stat } from 'node:fs/promises';
+import { cp, copyFile, rm, stat, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -36,6 +36,30 @@ if (existsSync(uiDist) && (await stat(uiDist)).isDirectory()) {
 } else {
   console.error(`[agent-god-view] Missing UI build at ${uiDist}`);
   failed = true;
+}
+
+const nativeBinaryNames = ['agent-god-view-shell.exe', 'agent-god-view-shell', 'Agent God View.exe'];
+let binaryFound = false;
+for (const root of [repoRoot, resolve(packageDir, '..', '..')]) {
+  for (const profile of ['release', 'debug']) {
+    for (const name of nativeBinaryNames) {
+      const srcBin = resolve(root, 'packages', 'shell', 'src-tauri', 'target', profile, name);
+      if (existsSync(srcBin)) {
+        const binDir = resolve(packageDir, 'bin');
+        if (!existsSync(binDir)) {
+          await mkdir(binDir, { recursive: true });
+        }
+        const targetBin = resolve(binDir, name);
+        await copyFile(srcBin, targetBin);
+        console.log(`[agent-god-view] Copied native binary ${name} to ${targetBin}`);
+        binaryFound = true;
+      }
+    }
+  }
+}
+
+if (!binaryFound) {
+  console.log(`[agent-god-view] Notice: Precompiled native Tauri binary not found locally (will be downloaded on postinstall if needed).`);
 }
 
 if (failed && required) {

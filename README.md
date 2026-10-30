@@ -24,7 +24,7 @@ Projetado inicialmente com suporte nativo ao **OpenCode**, a arquitetura separa 
 
 ---
 
-## 🛠️ Como Usar
+## 🛠️ Como Usar e Testar Localmente
 
 ### 1. Instalação das dependências
 Certifique-se de ter o Node.js (>= 20.0.0) e o pnpm instalados. Na raiz do repositório, execute:
@@ -33,28 +33,68 @@ pnpm install
 ```
 
 ### 2. Compilação do monorepo
-Compile todos os pacotes do monorepo (`ui`, `adapter-opencode`, `cli`):
+Compile todos os pacotes do monorepo (`core`, `adapter-opencode`, `ui`, `cli`, `shell`):
 ```bash
 pnpm build
 ```
 
-### 3. Executando o viewer no projeto atual
-O CLI aponta para o diretório atual e tenta abrir o aplicativo nativo Tauri quando o binário está disponível. Se ele não for encontrado, o visualizador abre no navegador:
+### 3. Executando o visualizador e CLI localmente
+Para iniciar o servidor HTTP/SSE e o CLI apontando para o projeto atual:
 ```bash
 pnpm --filter agent-god-view start
 ```
-Para forçar o navegador local (`--web`) ou servir apenas o HTTP/SSE sem abrir janela (`--headless`):
+*(Ou utilize o comando de desenvolvimento correspondente conforme o pacote).*
+Para forçar o uso do navegador (`--web`) ou iniciar no modo headless (`--headless`):
 ```bash
 pnpm --filter agent-god-view start -- --web
 pnpm --filter agent-god-view start -- --headless
 ```
 
-### 4. Replay de sessões de exemplo
+### 4. Executando o Tauri Shell em modo de desenvolvimento
+Para testar a aplicação desktop nativa (Tauri v2) e recursos como janelas flutuantes PiP e notificações do sistema:
+```bash
+pnpm tauri dev
+```
+*(Equivalente a `pnpm --filter @agent-god-view/shell dev`)*.
+
+### 5. Replay de sessões de exemplo
 Você pode reproduzir sessões gravadas (fixtures) para testar e inspecionar o comportamento dos agentes sem precisar de uma execução ativa do OpenCode:
 ```bash
 pnpm --filter agent-god-view start -- replay ../../fixtures/opencode-session-01.ndjson
 ```
-*(Ou alternativamente: `node packages/cli/bin.js replay fixtures/opencode-session-01.ndjson`)*
+
+---
+
+## ⚙️ Geração Automatizada do Binário Tauri via GitHub Actions (`v*`)
+
+O projeto conta com automação via **GitHub Actions** para compilar e empacotar o aplicativo nativo para distribuição:
+1. **Disparador por Tag**: Ao criar e enviar uma tag de versão semântica iniciada em `v` (ex: `git tag v0.1.0 && git push origin v0.1.0`), o pipeline do GitHub Actions é acionado.
+2. **Build em Runner Windows**: O workflow executa em um runner `windows-latest` preparado com Node.js, pnpm e a toolchain do Rust.
+3. **Compilação do Binário Executável**: Executa o comando de build do Tauri (`pnpm tauri build --no-bundle`) para gerar o binário `.exe` otimizado.
+4. **Release Automatizado e Checksum**: O GitHub Actions calcula a soma de verificação SHA-256 do executável gerado, cria um **GitHub Release** formal e anexa os artefatos binários para download seguro e verificação de integridade pelos clientes/CLI.
+
+---
+
+## 📦 Construção e Publicação no npm (`agent-god-view`)
+
+Para preparar e publicar o pacote oficial `agent-god-view` no registro npm:
+
+1. **Build Completo do Monorepo**:
+   Garanta que todos os pacotes estejam compilados e que os scripts de `prepack` (responsáveis por consolidar os artefatos de distribuição da CLI e binários) rodem corretamente:
+   ```bash
+   pnpm build
+   ```
+2. **Inspeção com o Doctor**:
+   Valide se o ambiente, dependências e binários locais estão íntegros executando:
+   ```bash
+   agent-god-view doctor
+   ```
+3. **Publicação no Registro npm**:
+   Utilize o pnpm para publicar o pacote principal com suporte a proveniência (`--provenance`) e acesso público:
+   ```bash
+   pnpm --filter agent-god-view publish --access public --provenance
+   ```
+   *(Nota: O ecossistema publica os pacotes de plataforma/binários opcionais antes do pacote principal da CLI quando aplicável).*
 
 ---
 
@@ -66,16 +106,7 @@ O projeto está organizado em pacotes modulares sob a pasta `packages/`:
 - `packages/adapter-opencode`: Leitor estático de `.opencode/`, leitor de spool NDJSON, parser de frontmatter e plugin do OpenCode.
 - `packages/ui`: Aplicação Vite + TypeScript para renderização do escritório 2D em canvas.
 - `packages/cli`: Utilitário de linha de comando (`agent-god-view`) e servidor HTTP/SSE.
-- `packages/shell`: Casca nativa em Rust / Tauri v2 (em desenvolvimento).
-
----
-
-## 🔮 Próximos Passos
-
-- **Shell Tauri v2**: Empacotamento como aplicativo desktop leve e nativo.
-- **PiP Flutuante**: Janela dedicada *Always-on-Top* e sem bordas para monitoramento contínuo em segundo plano.
-- **Avisos Nativos de Permissão**: Integração com notificações do sistema operacional e foco em solicitações de permissão dos agentes.
-- **Distribuição npm**: Publicação oficial do pacote `agent-god-view` e binários nativos via `optionalDependencies`.
+- `packages/shell`: Casca nativa em Rust / Tauri v2 para desktop e PiP.
 
 ---
 

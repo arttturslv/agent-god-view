@@ -78,6 +78,19 @@ function resolveNativeBinary(projectDir: string): string | undefined {
   const override = process.env.AGENT_GOD_VIEW_APP_BIN;
   if (override) candidates.push(resolve(override));
 
+  for (const candidateDir of [
+    resolve(__dirname, '../../../../bin'),
+    resolve(__dirname, '../../../bin'),
+    resolve(__dirname, '../../bin'),
+    resolve(__dirname, '../bin'),
+    resolve(projectDir, 'node_modules', 'agent-god-view', 'bin'),
+    resolve(projectDir, 'node_modules', '@agent-god-view', 'cli', 'bin'),
+  ]) {
+    for (const name of names) {
+      candidates.push(join(candidateDir, name));
+    }
+  }
+
   for (const root of [projectDir, resolve(__dirname, '../../../../..')]) {
     const targetDir = join(root, 'packages', 'shell', 'src-tauri', 'target');
     for (const name of names) {

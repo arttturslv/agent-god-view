@@ -17,12 +17,14 @@
   "files": [
     "dist",
     "ui-dist",
+    "bin",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
     "build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && tsc",
     "prepack": "node scripts/prepare-package.mjs --required",
+    "postinstall": "node scripts/postinstall.mjs",
     "start": "node dist/cli/src/bin.js"
   },
   "dependencies": {

@@ -4,7 +4,8 @@
   "version": "0.1.0",
   "identifier": "com.agentgodview.desktop",
   "build": {
-    "beforeDevCommand": "pnpm --filter @agent-god-view/ui build",
+    "beforeDevCommand": "pnpm --filter @agent-god-view/ui dev",
+    "devUrl": "http://localhost:5173",
     "beforeBuildCommand": "pnpm --filter @agent-god-view/ui build",
     "frontendDist": "../../ui/dist"
   },
