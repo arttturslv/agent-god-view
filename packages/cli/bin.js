@@ -1,4 +1,4 @@
 #!/usr/bin/env node
 /** @format */
 
-import('./dist/bin.js');
+import('./dist/cli/src/bin.js');

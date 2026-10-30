@@ -1,6 +1,6 @@
 /** @format */
 
-import type { AgentDef, AgentEvent } from "@agent-god-view/core";
+import type { AgentDef, AgentEvent } from "../../core/src/index.js";
 
 type RawRecord = Record<string, unknown>;
 

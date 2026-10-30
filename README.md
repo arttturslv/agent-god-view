@@ -19,7 +19,7 @@ Projetado inicialmente com suporte nativo ao **OpenCode**, a arquitetura separa 
 - **`@agent-god-view/core`**: Coração lógico do projeto. Fornece um schema normalizado (`AgentEvent`, `CrewState`) e uma função redutora pura (`reduce`) validada com rigor e testada com Vitest.
 - **`@agent-god-view/adapter-opencode`**: Leitor estático do `.opencode/` (lendo definições de agentes em `.md` e `opencode.json`) e leitor de spool NDJSON em tempo real (`tail`) com rotação e suporte a reconexão.
 - **`@agent-god-view/ui`**: Escritório 2D animado desenvolvido em Vite + TypeScript. Renderiza personagens, mesas, animações, áudio contextual e suporta modo compacto para Picture-in-Picture (PiP).
-- **`@agent-god-view/cli`**: Servidor HTTP robusto com suporte a Server-Sent Events (`/events`), watcher automático de alterações e comando de `replay` de sessões gravadas.
+- **`agent-god-view`**: CLI com servidor HTTP/SSE (`/events`), abertura do app nativo Tauri quando disponível, fallback para navegador (`--web`), modo headless (`--headless`), watcher automático de alterações e comando de `replay` de sessões gravadas.
 - **Plugin OpenCode (`.opencode/plugins/agent-god-view.ts`)**: Plugin leve e assíncrono que captura eventos do OpenCode (execução de ferramentas, mensagens, pedidos de permissão) e grava no spool local sem bloquear a execução principal.
 
 ---
@@ -38,16 +38,21 @@ Compile todos os pacotes do monorepo (`ui`, `adapter-opencode`, `cli`):
 pnpm build
 ```
 
-### 3. Executando o servidor e visualizando o projeto atual
-Para iniciar o servidor CLI apontando para o diretório atual e abrir o visualizador no navegador:
+### 3. Executando o viewer no projeto atual
+O CLI aponta para o diretório atual e tenta abrir o aplicativo nativo Tauri quando o binário está disponível. Se ele não for encontrado, o visualizador abre no navegador:
 ```bash
-pnpm --filter @agent-god-view/cli start
+pnpm --filter agent-god-view start
+```
+Para forçar o navegador local (`--web`) ou servir apenas o HTTP/SSE sem abrir janela (`--headless`):
+```bash
+pnpm --filter agent-god-view start -- --web
+pnpm --filter agent-god-view start -- --headless
 ```
 
 ### 4. Replay de sessões de exemplo
 Você pode reproduzir sessões gravadas (fixtures) para testar e inspecionar o comportamento dos agentes sem precisar de uma execução ativa do OpenCode:
 ```bash
-pnpm --filter @agent-god-view/cli start -- replay fixtures/opencode-session-01.ndjson
+pnpm --filter agent-god-view start -- replay ../../fixtures/opencode-session-01.ndjson
 ```
 *(Ou alternativamente: `node packages/cli/bin.js replay fixtures/opencode-session-01.ndjson`)*
 
@@ -70,10 +75,10 @@ O projeto está organizado em pacotes modulares sob a pasta `packages/`:
 - **Shell Tauri v2**: Empacotamento como aplicativo desktop leve e nativo.
 - **PiP Flutuante**: Janela dedicada *Always-on-Top* e sem bordas para monitoramento contínuo em segundo plano.
 - **Avisos Nativos de Permissão**: Integração com notificações do sistema operacional e foco em solicitações de permissão dos agentes.
-- **Distribuição npm**: Publicação oficial dos pacotes e binários pré-compilados (`@agent-god-view/cli`, binários nativos via `optionalDependencies`).
+- **Distribuição npm**: Publicação oficial do pacote `agent-god-view` e binários nativos via `optionalDependencies`.
 
 ---
 
 ## 📄 Licença
 
-Distribuído sob a licença MIT. Consulte a licença no diretório `.ai-crew/LICENSE` para mais detalhes.
+Distribuído sob a licença MIT. Consulte o arquivo [`LICENSE`](./LICENSE) para mais detalhes.

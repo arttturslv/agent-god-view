@@ -35,15 +35,21 @@ importers:
 
   packages/cli:
     dependencies:
-      '@agent-god-view/adapter-opencode':
-        specifier: workspace:*
-        version: link:../adapter-opencode
-      '@agent-god-view/core':
-        specifier: workspace:*
-        version: link:../core
+      chokidar:
+        specifier: ^3.5.3
+        version: 3.6.0
+      gray-matter:
+        specifier: ^4.0.3
+        version: 4.0.3
+      jsonc-parser:
+        specifier: ^3.2.0
+        version: 3.3.1
       open:
         specifier: ^9.1.0
         version: 9.1.0
+      zod:
+        specifier: ^4.0.0
+        version: 4.6.7
     devDependencies:
       '@types/node':
         specifier: ^20.0.0

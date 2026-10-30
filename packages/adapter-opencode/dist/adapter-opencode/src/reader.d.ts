@@ -1,5 +1,5 @@
 /** @format */
-import type { AgentDef } from '@agent-god-view/core';
+import type { AgentDef } from '../../core/src/index.js';
 export interface ProjectInfo {
     projectId: string;
     name: string;

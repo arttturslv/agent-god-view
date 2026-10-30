@@ -1,5 +1,5 @@
 /** @format */
-import type { AgentEvent } from "@agent-god-view/core";
+import type { AgentEvent } from "../../core/src/index.js";
 interface SessionInfo {
     agentId?: string;
     parentId?: string;

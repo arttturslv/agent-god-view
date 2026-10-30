@@ -4,6 +4,15 @@
   "type": "module",
   "version": "0.1.0",
   "description": "Visualizer for AI agents in an animated office",
+  "license": "MIT",
+  "author": "Artur Silva",
+  "repository": "https://github.com/arttturslv/agent-god-view",
+  "publishConfig": {
+    "access": "public"
+  },
+  "bin": {
+    "agent-god-view": "./packages/cli/bin.js"
+  },
   "engines": {
     "node": ">=20.0.0"
   },

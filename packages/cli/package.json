@@ -1,20 +1,36 @@
 {
-  "name": "@agent-god-view/cli",
+  "name": "agent-god-view",
   "version": "0.1.0",
   "type": "module",
-  "bin": {
-    "agent-god-view": "./bin.js"
+  "description": "CLI and HTTP/SSE server for Agent God View",
+  "license": "MIT",
+  "author": "Artur Silva",
+  "repository": "https://github.com/arttturslv/agent-god-view",
+  "publishConfig": {
+    "access": "public"
   },
-  "main": "./dist/bin.js",
-  "types": "./dist/bin.d.ts",
+  "bin": {
+    "agent-god-view": "./dist/cli/src/bin.js"
+  },
+  "main": "./dist/cli/src/bin.js",
+  "types": "./dist/cli/src/bin.d.ts",
+  "files": [
+    "dist",
+    "ui-dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
-    "build": "tsc",
-    "start": "node dist/bin.js"
+    "build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && tsc",
+    "prepack": "node scripts/prepare-package.mjs --required",
+    "start": "node dist/cli/src/bin.js"
   },
   "dependencies": {
-    "@agent-god-view/core": "workspace:*",
-    "@agent-god-view/adapter-opencode": "workspace:*",
-    "open": "^9.1.0"
+    "chokidar": "^3.5.3",
+    "gray-matter": "^4.0.3",
+    "jsonc-parser": "^3.2.0",
+    "open": "^9.1.0",
+    "zod": "^4.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

@@ -5,7 +5,7 @@ import { resolve, basename, join, dirname, extname } from 'node:path';
 import { existsSync, readdirSync, statSync, readFileSync } from 'node:fs';
 import matter from 'gray-matter';
 import { parse as parseJsonc } from 'jsonc-parser';
-import type { AgentDef } from '@agent-god-view/core';
+import type { AgentDef } from '../../core/src/index.js';
 
 export interface ProjectInfo {
   projectId: string;
