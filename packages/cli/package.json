@@ -1,6 +1,6 @@
 {
   "name": "agent-god-view",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "CLI and HTTP/SSE server for Agent God View",
   "license": "MIT",
